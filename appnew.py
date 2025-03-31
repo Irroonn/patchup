@@ -350,6 +350,7 @@ def get_chrome_options():
     chrome_options.add_argument("--single-process")  # Try this if multi-process is causing issues
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Path to the Chrome binary
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     return chrome_options
 
