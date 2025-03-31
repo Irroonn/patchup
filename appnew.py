@@ -161,7 +161,7 @@ def scrape_vinted(query):
     chrome_options.add_argument("--disable-software-rasterizer")  # Fixes rendering issues
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
     chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
-
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
     driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
     # chrome_options = configure_proxy_options()
 
@@ -228,7 +228,7 @@ def scrape_depop(query):
     chrome_options.add_argument("--disable-software-rasterizer")  # Fixes rendering issues
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
     chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
-
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
     driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
 
     # chrome_options = configure_proxy_options()
@@ -372,7 +372,7 @@ def scrape_mercari(query):
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     # chrome_options = configure_proxy_options()
-
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
     driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
 
     try:
@@ -437,10 +437,9 @@ def scrape_ebay(query):
     chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
 
     # chrome_options = configure_proxy_options()
-
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
     # Automatically handle chromedriver installation and path
     driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
-
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
     driver.get(url)
 
