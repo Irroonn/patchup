@@ -10,6 +10,22 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from flask_cors import CORS
 import time
+import threading
+import time
+import logging
+import atexit
+from queue import Queue, Empty
+from typing import Dict, Optional, List, Any
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import (
+    WebDriverException,
+    InvalidSessionIdException,
+    TimeoutException,
+    NoSuchWindowException
+)
+
 
 app = Flask(__name__)
 CORS(app)  # This enables CORS for all routes
@@ -22,51 +38,306 @@ def index():
 def serve_image(filename):
     return send_from_directory('static/images', filename)
 
-def setup_driver():
-    # Define options that focus on stability
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("WebDriverPool")
+
+class WebDriverPool:
+    """
+    A pool of reusable WebDriver instances.
     
-    # Critical for stability
-    options.add_argument("--disable-crash-reporter")
-    options.add_argument("--disable-in-process-stack-traces")
-    options.add_argument("--disable-logging")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--disable-background-networking")
+    This class manages a pool of WebDriver instances for Selenium automation,
+    handling creation, validation, cleanup, and efficient reuse.
+    """
     
-    # Add a generous timeout for browser operations
-    options.page_load_strategy = 'normal'
-    
-    try:
-        # Try using static ChromeDriver path (more reliable on server environments)
-        service = Service(executable_path='/usr/bin/chromedriver')
-        driver = webdriver.Chrome(service=service, options=options)
+    def __init__(self, 
+                 max_drivers: int = 5,
+                 max_driver_age: int = 1800,  # 30 minutes in seconds
+                 chrome_driver_path: Optional[str] = None,
+                 browser_options: Optional[Dict[str, Any]] = None):
+        """
+        Initialize the WebDriver pool.
         
-        # Set timeouts to avoid hanging
+        Args:
+            max_drivers: Maximum number of driver instances in the pool
+            max_driver_age: Maximum age of a driver in seconds before it's recycled
+            chrome_driver_path: Path to chromedriver executable
+            browser_options: Dictionary of browser options to use
+        """
+        self.driver_pool = Queue()
+        self.active_drivers: Dict[int, dict] = {}
+        self.max_drivers = max_drivers
+        self.max_driver_age = max_driver_age
+        self.chrome_driver_path = chrome_driver_path
+        self.browser_options = browser_options or {}
+        
+        self.lock = threading.RLock()
+        self.pool_size = 0
+        
+        # Start the maintenance thread
+        self.running = True
+        self.maintenance_thread = threading.Thread(
+            target=self._maintenance_worker,
+            daemon=True
+        )
+        self.maintenance_thread.start()
+        
+        # Register shutdown function
+        atexit.register(self.shutdown)
+        
+        logger.info(f"WebDriverPool initialized with max_drivers={max_drivers}")
+    
+    def get_driver(self, timeout: int = 30) -> webdriver.Chrome:
+        """
+        Get a WebDriver instance from the pool or create a new one.
+        
+        Args:
+            timeout: Maximum time in seconds to wait for an available driver
+            
+        Returns:
+            A Chrome WebDriver instance
+            
+        Raises:
+            TimeoutError: If no driver becomes available within the timeout period
+        """
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            # Try to get a driver from the pool
+            try:
+                driver_info = self.driver_pool.get(block=False)
+                driver = driver_info["driver"]
+                
+                # Validate the driver
+                if self._is_driver_valid(driver):
+                    # Mark this driver as active
+                    with self.lock:
+                        self.active_drivers[id(driver)] = {
+                            "driver": driver,
+                            "created_at": driver_info["created_at"],
+                            "last_used": time.time()
+                        }
+                    logger.debug(f"Retrieved existing driver from pool. Current pool size: {self.pool_size}")
+                    return driver
+                else:
+                    # Driver is invalid, clean it up and try again
+                    self._quit_driver(driver)
+                    with self.lock:
+                        self.pool_size -= 1
+                    continue
+            except Empty:
+                # No drivers in the pool, create one if we haven't hit the limit
+                with self.lock:
+                    if self.pool_size < self.max_drivers:
+                        driver = self._create_new_driver()
+                        self.pool_size += 1
+                        created_at = time.time()
+                        self.active_drivers[id(driver)] = {
+                            "driver": driver,
+                            "created_at": created_at,
+                            "last_used": created_at
+                        }
+                        logger.info(f"Created new driver. Current pool size: {self.pool_size}")
+                        return driver
+            
+            # If we get here, we need to wait for a driver to become available
+            time.sleep(0.5)
+        
+        # If we exit the loop, we've timed out
+        raise TimeoutError("Timed out waiting for an available WebDriver")
+    
+    def release_driver(self, driver: webdriver.Chrome) -> None:
+        """
+        Return a driver to the pool.
+        
+        Args:
+            driver: The WebDriver instance to return to the pool
+        """
+        if not driver:
+            return
+            
+        driver_id = id(driver)
+        
+        with self.lock:
+            if driver_id in self.active_drivers:
+                driver_info = self.active_drivers.pop(driver_id)
+                
+                # Check if the driver is too old
+                age = time.time() - driver_info["created_at"]
+                if age > self.max_driver_age or not self._is_driver_valid(driver):
+                    # Driver is too old or invalid, quit it
+                    self._quit_driver(driver)
+                    self.pool_size -= 1
+                    logger.debug(f"Driver too old or invalid, removed from pool. Age: {age:.1f}s. Current pool size: {self.pool_size}")
+                else:
+                    # Return the driver to the pool
+                    self.driver_pool.put({
+                        "driver": driver,
+                        "created_at": driver_info["created_at"]
+                    })
+                    logger.debug(f"Driver returned to pool. Current pool size: {self.pool_size}")
+            else:
+                # Unknown driver, just quit it
+                self._quit_driver(driver)
+                logger.warning("Unknown driver released, quitting it without affecting pool size")
+    
+    def _create_new_driver(self) -> webdriver.Chrome:
+        """
+        Create a new WebDriver instance with the configured options.
+        
+        Returns:
+            A new Chrome WebDriver instance
+        """
+        chrome_options = Options()
+        
+        # Add default options for stability
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
+        
+        # Add user-defined options
+        for option, value in self.browser_options.items():
+            if value is True:
+                chrome_options.add_argument(f"--{option}")
+            elif value is not None:
+                chrome_options.add_argument(f"--{option}={value}")
+                
+        # Add headless option by default for server environments
+        if "headless" not in self.browser_options:
+            chrome_options.add_argument("--headless=new")
+        
+        # Create the driver
+        if self.chrome_driver_path:
+            service = Service(executable_path=self.chrome_driver_path)
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        else:
+            driver = webdriver.Chrome(options=chrome_options)
+        
+        # Set timeouts
         driver.set_page_load_timeout(30)
+        driver.implicitly_wait(10)
         driver.set_script_timeout(30)
         
         return driver
-    except Exception as e:
-        print(f"Error creating Chrome driver with static path: {e}")
+    
+    def _is_driver_valid(self, driver: webdriver.Chrome) -> bool:
+        """
+        Check if a WebDriver instance is still valid.
+        
+        Args:
+            driver: The WebDriver instance to check
+            
+        Returns:
+            True if the driver is valid, False otherwise
+        """
+        if not driver:
+            return False
+            
         try:
-            # Fall back to ChromeDriverManager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
+            # Try a simple operation to check if the driver is responsive
+            driver.current_url
+            return True
+        except (InvalidSessionIdException, NoSuchWindowException, WebDriverException):
+            return False
+    
+    def _quit_driver(self, driver: webdriver.Chrome) -> None:
+        """
+        Safely quit a WebDriver instance.
+        
+        Args:
+            driver: The WebDriver instance to quit
+        """
+        if not driver:
+            return
             
-            # Set timeouts
-            driver.set_page_load_timeout(30)
-            driver.set_script_timeout(30)
-            
-            return driver
+        try:
+            driver.quit()
         except Exception as e:
-            print(f"Error creating Chrome driver with ChromeDriverManager: {e}")
-            raise
+            logger.warning(f"Error quitting driver: {str(e)}")
+    
+    def _maintenance_worker(self) -> None:
+        """
+        Background maintenance worker that checks for stuck or old drivers.
+        """
+        while self.running:
+            try:
+                # Sleep first to allow initial setup
+                time.sleep(30)
+                
+                with self.lock:
+                    # Check for stuck active drivers (unused for a long time)
+                    current_time = time.time()
+                    stuck_drivers = []
+                    
+                    for driver_id, info in list(self.active_drivers.items()):
+                        # If a driver has been active for more than 5 minutes, consider it stuck
+                        if current_time - info["last_used"] > 300:  # 5 minutes
+                            stuck_drivers.append((driver_id, info["driver"]))
+                    
+                    # Clean up stuck drivers
+                    for driver_id, driver in stuck_drivers:
+                        logger.warning(f"Found stuck driver (unused for >5min), cleaning up")
+                        self._quit_driver(driver)
+                        self.active_drivers.pop(driver_id, None)
+                        self.pool_size -= 1
+                
+                # Check pool size consistency
+                with self.lock:
+                    expected_size = len(self.active_drivers) + self.driver_pool.qsize()
+                    if expected_size != self.pool_size:
+                        logger.warning(f"Pool size inconsistency detected: tracked={self.pool_size}, actual={expected_size}")
+                        self.pool_size = expected_size
+                    
+            except Exception as e:
+                logger.error(f"Error in maintenance worker: {str(e)}")
+    
+    def shutdown(self) -> None:
+        """
+        Shut down the pool and clean up all drivers.
+        """
+        logger.info("Shutting down WebDriverPool...")
+        self.running = False
+        
+        # Clean up all drivers in the pool
+        while not self.driver_pool.empty():
+            try:
+                driver_info = self.driver_pool.get(block=False)
+                self._quit_driver(driver_info["driver"])
+            except Empty:
+                break
+        
+        # Clean up active drivers
+        with self.lock:
+            for info in list(self.active_drivers.values()):
+                self._quit_driver(info["driver"])
+            self.active_drivers.clear()
+            self.pool_size = 0
+        
+        logger.info("WebDriverPool shutdown complete")
+
+
+# Example usage with your Flask app:
+def initialize_driver_pool() -> WebDriverPool:
+    """Initialize the global WebDriver pool"""
+    browser_options = {
+        "disable-infobars": True,
+        "disable-extensions": True,
+        "disable-popup-blocking": True,
+        "incognito": True,
+        "headless": "new",  # Using new headless mode
+    }
+    
+    return WebDriverPool(
+        max_drivers=1,  # Adjust based on your server resources
+        max_driver_age=1800,  # 30 minutes
+        browser_options=browser_options
+    )
+
+
 
 def get_chrome_options():
     chrome_options = Options()
@@ -214,7 +485,7 @@ def scrape_vinted(query):
     # Set up Selenium options
     
     chrome_options = get_chrome_options()
-    driver = setup_driver()
+    driver = driver_pool.get_driver(timeout=10)
 
     # chrome_options = configure_proxy_options()
 
@@ -273,7 +544,7 @@ def scrape_vinted(query):
 def scrape_depop(query):
     # Set up Selenium options
     chrome_options = get_chrome_options()
-    driver = setup_driver()
+    driver = driver_pool.get_driver(timeout=10)
 
     # chrome_options = configure_proxy_options()
 
@@ -404,7 +675,7 @@ def scrape_depop(query):
 
 def scrape_mercari(query):
     chrome_options = get_chrome_options()
-    driver = setup_driver()
+    driver = driver_pool.get_driver(timeout=10)
 
 
 
@@ -460,7 +731,7 @@ def scrape_mercari(query):
 
 def scrape_ebay(query):
     chrome_options = get_chrome_options()
-    driver = setup_driver()
+    driver = driver_pool.get_driver(timeout=10)
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
     driver.get(url)
 
