@@ -84,10 +84,12 @@ def convert_to_gbp(price_string):
 def scrape_vinted(query):
     # Set up Selenium options
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run without UI
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")  # Important for running as non-root
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Helps with memory issues
+    chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
+    chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
 
     # Initialize WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
@@ -152,6 +154,8 @@ def scrape_depop(query):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
+    chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
 
     # Initialize WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
@@ -288,6 +292,8 @@ def scrape_mercari(query):
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
+    chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
@@ -343,7 +349,12 @@ def scrape_mercari(query):
 
 def scrape_ebay(query):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in background
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")  # Important for running as non-root
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Helps with memory issues
+    chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
+    chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
 
     # Automatically handle chromedriver installation and path
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
