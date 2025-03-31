@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify, request, send_from_directory
+import zipfile
 import concurrent.futures
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -21,6 +22,74 @@ def index():
 def serve_image(filename):
     return send_from_directory('static/images', filename)
 
+def configure_proxy_options_with_auth():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    
+    # For proxies that require authentication
+    proxy = "your-proxy-ip:port"
+    username = "your-username"
+    password = "your-password"
+    
+    manifest_json = """
+    {
+        "version": "1.0.0",
+        "manifest_version": 2,
+        "name": "Chrome Proxy",
+        "permissions": [
+            "proxy",
+            "tabs",
+            "unlimitedStorage",
+            "storage",
+            "webRequest",
+            "webRequestBlocking"
+        ],
+        "background": {
+            "scripts": ["background.js"]
+        }
+    }
+    """
+    
+    background_js = """
+    var config = {
+        mode: "fixed_servers",
+        rules: {
+            singleProxy: {
+                scheme: "http",
+                host: "%s",
+                port: %s
+            },
+            bypassList: []
+        }
+    };
+    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+    function callbackFn(details) {
+        return {
+            authCredentials: {
+                username: "%s",
+                password: "%s"
+            }
+        };
+    }
+    chrome.webRequest.onAuthRequired.addListener(
+        callbackFn,
+        {urls: ["<all_urls>"]},
+        ['blocking']
+    );
+    """ % (proxy.split(':')[0], proxy.split(':')[1], username, password)
+    
+    # Create plugin
+    plugin_file = 'proxy_auth_plugin.zip'
+    with zipfile.ZipFile(plugin_file, 'w') as zp:
+        zp.writestr("manifest.json", manifest_json)
+        zp.writestr("background.js", background_js)
+    
+    chrome_options.add_extension(plugin_file)
+    
+    return chrome_options
 
 def convert_to_gbp(price_string):
     # Handle empty or invalid prices
@@ -90,6 +159,7 @@ def scrape_vinted(query):
     chrome_options.add_argument("--disable-dev-shm-usage")  # Helps with memory issues
     chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
     chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
+    chrome_options = configure_proxy_options()
 
     # Initialize WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
@@ -156,6 +226,7 @@ def scrape_depop(query):
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
     chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
+    chrome_options = configure_proxy_options()
 
     # Initialize WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
@@ -294,6 +365,7 @@ def scrape_mercari(query):
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
     chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
+    chrome_options = configure_proxy_options()
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
@@ -355,6 +427,7 @@ def scrape_ebay(query):
     chrome_options.add_argument("--disable-dev-shm-usage")  # Helps with memory issues
     chrome_options.add_argument("--remote-debugging-port=9222")  # For debugging
     chrome_options.add_argument("--window-size=1920,1080")  # Set a standard window size
+    chrome_options = configure_proxy_options()
 
     # Automatically handle chromedriver installation and path
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
