@@ -486,7 +486,8 @@ def scrape_vinted(query):
     # Set up Selenium options
     
     chrome_options = get_chrome_options()
-    driver = WebDriverPool.get_driver(timeout=10)
+    driver_pool = WebDriverPool()
+    driver = driver_pool.get_driver(timeout=10)
 
     # chrome_options = configure_proxy_options()
 
@@ -546,7 +547,8 @@ def scrape_depop(query):
     driver = None
     # Set up Selenium options
     chrome_options = get_chrome_options()
-    driver = WebDriverPool.get_driver(timeout=10)
+    driver_pool = WebDriverPool()
+    driver = driver_pool.get_driver(timeout=10)
 
     # chrome_options = configure_proxy_options()
 
@@ -678,7 +680,8 @@ def scrape_depop(query):
 def scrape_mercari(query):
     driver = None
     chrome_options = get_chrome_options()
-    driver = WebDriverPool.get_driver(timeout=10)
+    driver_pool = WebDriverPool()
+    driver = driver_pool.get_driver(timeout=10)
 
 
 
@@ -735,7 +738,8 @@ def scrape_mercari(query):
 def scrape_ebay(query):
     driver = None
     chrome_options = get_chrome_options()
-    driver = WebDriverPool.get_driver(timeout=10)
+    driver_pool = WebDriverPool()
+    driver = driver_pool.get_driver(timeout=10)
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
     driver.get(url)
 
