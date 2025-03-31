@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Search</title>
+    <style>
+        /* Basic styles for the grid container */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 columns */
+            gap: 16px; /* Spacing between items */
+            padding: 20px;
+        }
+
+        /* Style for each product item */
+        .product {
+            border: 1px solid #ddd; /* Light border around each product */
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+        }
+
+        .product img {
+            width: 100%; /* Ensure images take the full width of the product card */
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .product h3 {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        .product p {
+            font-size: 1em;
+            color: #555;
+        }
+
+        .product a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* Icon positioning */
+        /* Adjust icon positioning to avoid overlap */
+        .icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px; /* Slightly smaller */
+            height: 40px;
+            background-color: white; /* Adds a white background for visibility */
+            border-radius: 50%; /* Makes it circular */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow for contrast */
+        }
+
+        /* Ensure the logo inside stays properly scaled */
+        .icon img {
+            width: 20px;  /* Adjust to preferred size */
+            height: auto;
+        }
+
+        /* Ensure the grid is responsive */
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns for smaller screens */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: 1fr; /* 1 column for very small screens */
+            }
+        }
+
+        /* Style for the loading container */
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 50px auto;
+            text-align: center;
+            z-index: 100;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        /* Style for the progress indicators */
+        .progress-container {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            flex-grow: 1;
+            height: 8px;
+            background-color: #f3f3f3;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            width: 80px;
+            text-align: right;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .progress-status {
+            width: 30px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        /* Style for the source icons in progress */
+        .source-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        /* General body styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .search-box {
+            margin: 20px 0;
+            display: flex;
+        }
+        .search-box input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+        }
+        .search-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 0 5px 5px 0;
+            font-size: 16px;
+        }
+        .search-button:hover {
+            background-color: #45a049;
+        }
+        .product-header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Align title to the left */
+            padding-right: 40px; /* Prevent overlap with logo */
+        }
+
+        .product-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+            text-align: left; /* Ensure text is left-aligned */
+            flex-grow: 1; /* Allow the title to take up available space */
+        }
+
+        .inline-logo {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Results summary */
+        .results-summary {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .search-complete {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        /* NEW STYLES FOR SORTING AND FILTERING */
+        .filters-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .filters-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .filters-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .filter-tag {
+            background-color: #e7f3ff;
+            border: 1px solid #a8d1ff;
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .filter-tag-text {
+            margin-right: 8px;
+        }
+
+        .filter-tag-remove {
+            cursor: pointer;
+            font-weight: bold;
+            color: #0077cc;
+        }
+
+        .source-filter-option {
+            display: flex;
+            align-items: center;
+        }
+
+        .source-filter-option img {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+        }
+
+        .badge-count {
+            display: inline-block;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        /* Price display with consistent styling */
+        .price-display {
+            font-weight: bold;
+            color: #e91e63;
+        }
+
+        /* Marketplace badge */
+        .marketplace-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* No results message */
+        .no-results {
+            text-align: center;
+            padding: 30px;
+            font-size: 18px;
+            color: #666;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Search for Products</h1>
+
+    <div class="search-box">
+        <input type="text" id="searchQuery" placeholder="Enter a product name..." />
+        <button class="search-button" id="search-button">Search</button>
+    </div>
+
+    <div id="loading" class="loading-container" style="display: none;">
+        <h2>Searching across marketplaces...</h2>
+
+        <div class="progress-container">
+            <div class="progress-item">
+                <img src="static/images/vinted.png" alt="Vinted" class="source-icon">
+                <div class="progress-label">Vinted</div>
+                <div class="progress-bar">
+                    <div id="vinted-progress" class="progress-fill"></div>
+                </div>
+                <div id="vinted-status" class="progress-status">0%</div>
+            </div>
+
+            <div class="progress-item">
+                <img src="static/images/depop.png" alt="Depop" class="source-icon">
+                <div class="progress-label">Depop</div>
+                <div class="progress-bar">
+                    <div id="depop-progress" class="progress-fill"></div>
+                </div>
+                <div id="depop-status" class="progress-status">0%</div>
+            </div>
+
+            <div class="progress-item">
+                <img src="static/images/mercari.png" alt="Mercari" class="source-icon">
+                <div class="progress-label">Mercari</div>
+                <div class="progress-bar">
+                    <div id="mercari-progress" class="progress-fill"></div>
+                </div>
+                <div id="mercari-status" class="progress-status">0%</div>
+            </div>
+
+            <div class="progress-item">
+                <img src="static/images/ebay.png" alt="eBay" class="source-icon">
+                <div class="progress-label">eBay</div>
+                <div class="progress-bar">
+                    <div id="ebay-progress" class="progress-fill"></div>
+                </div>
+                <div id="ebay-status" class="progress-status">0%</div>
+            </div>
+        </div>
+
+        <div id="search-status" class="results-summary">Starting search...</div>
+    </div>
+
+    <!-- New filters container -->
+    <div id="filters-container" class="filters-container" style="display: none;">
+        <h3 class="filters-title">Sort & Filter Results</h3>
+        <div class="filters-row">
+            <div class="filter-group">
+                <label class="filter-label" for="sort-select">Sort By:</label>
+                <select id="sort-select" class="filter-select">
+                    <option value="random">Random (Default)</option>
+                    <option value="price-low-high">Price: Low to High</option>
+                    <option value="price-high-low">Price: High to Low</option>
+                    <option value="a-z">Title: A to Z</option>
+                    <option value="z-a">Title: Z to A</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="marketplace-select">Marketplace:</label>
+                <select id="marketplace-select" class="filter-select">
+                    <option value="all">All Marketplaces</option>
+                    <option value="vinted">Vinted</option>
+                    <option value="depop">Depop</option>
+                    <option value="mercari">Mercari</option>
+                    <option value="ebay">eBay</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="price-range-select">Price Range:</label>
+                <select id="price-range-select" class="filter-select">
+                    <option value="all">All Prices</option>
+                    <option value="0-25">Under $25</option>
+                    <option value="25-50">$25 - $50</option>
+                    <option value="50-100">$50 - $100</option>
+                    <option value="100+">$100+</option>
+                </select>
+            </div>
+        </div>
+        <div id="active-filters" class="active-filters">
+            <!-- Active filters will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <div id="results"></div>
+</div>
+
+<script>
+    // Define the sources we'll be searching
+    const sources = ['vinted', 'depop', 'mercari', 'ebay'];
+    let completedSources = 0;
+    let allResults = [];
+    let filteredResults = [];
+
+    // Store source counts for marketplace filter
+    let sourceCounts = {};
+
+    // Function to update progress for a source
+    function updateProgress(source, percentage) {
+        const progressBar = document.getElementById(`${source}-progress`);
+        const statusText = document.getElementById(`${source}-status`);
+
+        progressBar.style.width = `${percentage}%`;
+        statusText.textContent = `${percentage}%`;
+
+        // Update the search status message
+        document.getElementById('search-status').textContent =
+            `Searching... ${completedSources} of ${sources.length} marketplaces complete`;
+    }
+
+    // Function to mark a source as complete
+    function markSourceComplete(source) {
+        updateProgress(source, 100);
+        completedSources++;
+
+        // Update the search status message
+        if (completedSources === sources.length) {
+            document.getElementById('search-status').innerHTML =
+                '<span class="search-complete">Search complete! Displaying results...</span>';
+
+            // Small delay before displaying results to make the completion visible
+            setTimeout(() => {
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("filters-container").style.display = "block";
+
+                // Initialize sourceCounts
+                updateSourceCounts(allResults);
+
+                // Set filtered results equal to all results initially
+                filteredResults = [...allResults];
+
+                // Display results
+                displayResults(filteredResults);
+            }, 500);
+        } else {
+            document.getElementById('search-status').textContent =
+                `Searching... ${completedSources} of ${sources.length} marketplaces complete`;
+        }
+    }
+
+    // Function to update source counts
+    function updateSourceCounts(results) {
+        sourceCounts = {};
+        sources.forEach(source => {
+            sourceCounts[source] = results.filter(item => item.source === source).length;
+        });
+    }
+
+    // Function to perform the progressive search
+    function performProgressiveSearch() {
+        const query = document.getElementById("searchQuery").value;
+
+        if (!query.trim()) {
+            alert("Please enter a search query!");
+            return;
+        }
+
+        // Reset state
+        completedSources = 0;
+        allResults = [];
+        filteredResults = [];
+        sources.forEach(source => updateProgress(source, 0));
+
+        // Reset filters
+        document.getElementById("sort-select").value = "random";
+        document.getElementById("marketplace-select").value = "all";
+        document.getElementById("price-range-select").value = "all";
+        document.getElementById("active-filters").innerHTML = "";
+
+        // Show the loading container and hide filters
+        document.getElementById("loading").style.display = "flex";
+        document.getElementById("filters-container").style.display = "none";
+        document.getElementById("results").innerHTML = ""; // Clear any previous results
+        document.getElementById('search-status').textContent = "Starting search...";
+
+        // Function to fetch results from a specific source
+        function fetchSourceResults(source) {
+            // Simulate progress updates with artificial steps
+            // In a real implementation, you'd want server-sent events or WebSockets for actual progress
+            const progressSteps = [10, 30, 50, 75, 90];
+            let stepIndex = 0;
+
+            // Start progress simulation
+            const progressInterval = setInterval(() => {
+                if (stepIndex < progressSteps.length) {
+                    updateProgress(source, progressSteps[stepIndex]);
+                    stepIndex++;
+                }
+            }, 500);
+
+            // Fetch results from the API
+            fetch(`http://127.0.0.1:5000/progressive-search?query=${encodeURIComponent(query)}&source=${source}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`${source} search failed: ${response.statusText}`);
+                    }
+                    clearInterval(progressInterval); // Stop progress simulation
+                    return response.json();
+                })
+                .then(data => {
+                    // Process the price into numeric values for sorting
+                    data.forEach(item => {
+                        item.numericPrice = extractNumericPrice(item.price);
+                    });
+
+                    // Add results to our collection
+                    allResults = allResults.concat(data);
+                    markSourceComplete(source);
+                })
+                .catch(error => {
+                    console.error(`Error fetching ${source} data:`, error);
+                    clearInterval(progressInterval); // Stop progress simulation
+                    markSourceComplete(source);
+                });
+        }
+
+        // Start fetching from all sources simultaneously
+        sources.forEach(source => fetchSourceResults(source));
+    }
+
+    // Function to extract numeric price from price string
+    function extractNumericPrice(priceString) {
+        if (!priceString) return 0;
+
+        // Handle different currency formats and extract numeric portion
+        const numericMatch = priceString.match(/[0-9.,]+/);
+        if (numericMatch) {
+            // Remove commas and convert to float
+            return parseFloat(numericMatch[0].replace(/,/g, ''));
+        }
+        return 0;
+    }
+
+    // Apply all current filters and sorting
+    function applyFilters() {
+        const sortMethod = document.getElementById("sort-select").value;
+        const marketplace = document.getElementById("marketplace-select").value;
+        const priceRange = document.getElementById("price-range-select").value;
+
+        // First, filter by marketplace
+        let results = [...allResults];
+        if (marketplace !== "all") {
+            results = results.filter(item => item.source === marketplace);
+        }
+
+        // Then filter by price range
+        if (priceRange !== "all") {
+            let min, max;
+            if (priceRange === "0-25") {
+                min = 0; max = 25;
+            } else if (priceRange === "25-50") {
+                min = 25; max = 50;
+            } else if (priceRange === "50-100") {
+                min = 50; max = 100;
+            } else if (priceRange === "100+") {
+                min = 100; max = Number.MAX_VALUE;
+            }
+
+            results = results.filter(item => {
+                const price = item.numericPrice;
+                return price >= min && price < max;
+            });
+        }
+
+        // Then apply sorting
+        if (sortMethod === "price-low-high") {
+            results.sort((a, b) => a.numericPrice - b.numericPrice);
+        } else if (sortMethod === "price-high-low") {
+            results.sort((a, b) => b.numericPrice - a.numericPrice);
+        } else if (sortMethod === "a-z") {
+            results.sort((a, b) => a.title.localeCompare(b.title));
+        } else if (sortMethod === "z-a") {
+            results.sort((a, b) => b.title.localeCompare(a.title));
+        } else if (sortMethod === "random") {
+            shuffleArray(results);
+        }
+
+        // Update filtered results and redisplay
+        filteredResults = results;
+        displayResults(filteredResults);
+
+        // Update active filters
+        updateActiveFilters(sortMethod, marketplace, priceRange);
+    }
+
+    // Update the active filters display
+    function updateActiveFilters(sortMethod, marketplace, priceRange) {
+        const activeFiltersContainer = document.getElementById("active-filters");
+        activeFiltersContainer.innerHTML = ""; // Clear existing filters
+
+        // Add sort method tag if not default
+        if (sortMethod !== "random") {
+            const sortLabel = document.getElementById("sort-select").options[
+                document.getElementById("sort-select").selectedIndex
+            ].text;
+
+            addFilterTag(activeFiltersContainer, `Sort: ${sortLabel}`, () => {
+                document.getElementById("sort-select").value = "random";
+                applyFilters();
+            });
+        }
+
+        // Add marketplace tag if not "all"
+        if (marketplace !== "all") {
+            const marketplaceLabel = document.getElementById("marketplace-select").options[
+                document.getElementById("marketplace-select").selectedIndex
+            ].text;
+
+            addFilterTag(activeFiltersContainer, `Marketplace: ${marketplaceLabel}`, () => {
+                document.getElementById("marketplace-select").value = "all";
+                applyFilters();
+            });
+        }
+
+        // Add price range tag if not "all"
+        if (priceRange !== "all") {
+            const priceLabel = document.getElementById("price-range-select").options[
+                document.getElementById("price-range-select").selectedIndex
+            ].text;
+
+            addFilterTag(activeFiltersContainer, `Price: ${priceLabel}`, () => {
+                document.getElementById("price-range-select").value = "all";
+                applyFilters();
+            });
+        }
+    }
+
+    // Helper to add a filter tag
+    function addFilterTag(container, text, removeCallback) {
+        const tag = document.createElement("div");
+        tag.className = "filter-tag";
+        tag.innerHTML = `
+            <span class="filter-tag-text">${text}</span>
+            <span class="filter-tag-remove">×</span>
+        `;
+
+        tag.querySelector(".filter-tag-remove").addEventListener("click", removeCallback);
+        container.appendChild(tag);
+    }
+
+    // Event listener for the search button
+    document.getElementById("search-button").addEventListener("click", performProgressiveSearch);
+
+    // Event listener for the Enter key in the search input
+    document.getElementById("searchQuery").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault(); // Prevent default form submission behavior
+            performProgressiveSearch();
+        }
+    });
+
+    // Event listeners for filters
+    document.getElementById("sort-select").addEventListener("change", applyFilters);
+    document.getElementById("marketplace-select").addEventListener("change", applyFilters);
+    document.getElementById("price-range-select").addEventListener("change", applyFilters);
+
+    // Function to display the results in a grid layout
+    function displayResults(data) {
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "";  // Clear previous results
+
+        if (data.length === 0) {
+            resultsDiv.innerHTML = '<div class="no-results">No products match your filter criteria. Try adjusting your filters.</div>';
+            return;
+        }
+
+        // Create a wrapper div for the grid layout
+        const gridContainer = document.createElement("div");
+        gridContainer.classList.add("grid-container");
+
+        // Define image URLs for logos
+        const logoUrls = {
+            'vinted': 'static/images/vinted.png',
+            'depop': 'static/images/depop.png',
+            'mercari': 'static/images/mercari.png',
+            'ebay': 'static/images/ebay.png',
+        };
+
+        // Loop through the products and create HTML for each
+        data.forEach(item => {
+            const productDiv = document.createElement("div");
+            productDiv.classList.add("product");
+
+            // Get the logo URL based on the source
+            const logoUrl = logoUrls[item.source] || '';
+
+            // Display original price in small text if available and different
+            let priceDisplay = `<span class="price-display">${item.price}</span>`;
+            if (item.original_price && item.original_price !== item.price && item.original_price !== "No price") {
+                priceDisplay += ` <span class="original-price">(${item.original_price})</span>`;
+            }
+
+            productDiv.innerHTML = `
+                <div class="icon">
+                    ${logoUrl ? `<img src="${logoUrl}" alt="${item.source} logo">` : ''}
+                </div>
+                <div class="product-header">
+                    <h3>${item.title}</h3>
+                </div>
+                <p><strong>Price:</strong> ${priceDisplay}</p>
+                <a href="${item.link}" target="_blank">
+                    <img src="${item.image}" alt="${item.title}" />
+                </a>
+            `;
+
+            gridContainer.appendChild(productDiv);
+        });
+
+        // Add results summary
+        const totalResults = allResults.length;
+        const filteredCount = data.length;
+        const summaryText = filteredCount === totalResults
+            ? `Found ${totalResults} products across ${completedSources} marketplaces`
+            : `Showing ${filteredCount} of ${totalResults} products`;
+
+        const summaryDiv = document.createElement("div");
+        summaryDiv.classList.add("results-summary");
+        summaryDiv.innerHTML = summaryText;
+        resultsDiv.appendChild(summaryDiv);
+
+        // Append the grid of products to the results div
+        resultsDiv.appendChild(gridContainer);
+    }
+
+    // Update the extractNumericPrice function to properly handle GBP prices
+    function extractNumericPrice(priceString) {
+        if (!priceString || priceString === "No price") return 0;
+
+        // Handle GBP format (£XX.XX)
+        if (priceString.startsWith('£')) {
+            try {
+                return parseFloat(priceString.substring(1).replace(/,/g, ''));
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        // Fallback to the original method for other formats
+        const numericMatch = priceString.match(/[0-9.,]+/);
+        if (numericMatch) {
+            return parseFloat(numericMatch[0].replace(/,/g, ''));
+        }
+        return 0;
+    }
+
+    // Add some CSS for the original price display
+    document.head.insertAdjacentHTML('beforeend', `
+    <style>
+    .original-price {
+        font-size: 0.8em;
+        color: #888;
+        text-decoration: line-through;
+        margin-left: 5px;
+    }
+
+    .marketplace-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        background-color: rgba(255, 255, 255, 0.8);
+        text-transform: capitalize;
+    }
+    </style>
+    `);
+
+
+    // Function to shuffle the array (Fisher-Yates)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+        }
+    }
+</script>
+
+</body>
+</html>
