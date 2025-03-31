@@ -214,10 +214,15 @@ class WebDriverPool:
         
         # Create the driver
         if self.chrome_driver_path:
-            service = Service(executable_path=self.chrome_driver_path)
+            chrome_driver_path = "/usr/local/bin/chromedriver"
+            chrome_binary_path = "/opt/google/chrome/chrome"
+            service = Service(executable_path=chrome_driver_path)
             driver = webdriver.Chrome(service=service, options=chrome_options)
         else:
-            driver = webdriver.Chrome(options=chrome_options)
+            chrome_driver_path = "/usr/local/bin/chromedriver"
+            chrome_binary_path = "/opt/google/chrome/chrome"
+            service = Service(executable_path=chrome_driver_path)
+            driver = webdriver.Chrome(service=service, options=chrome_options)
         
         # Set timeouts
         driver.set_page_load_timeout(30)
