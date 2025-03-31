@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from flask_cors import CORS
+import undetected_chromedriver as uc
 import time
 
 app = Flask(__name__)
@@ -152,6 +153,7 @@ def convert_to_gbp(price_string):
 # Vinted Scraping Function
 def scrape_vinted(query):
     # Set up Selenium options
+    
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")  # Ensures headless works with Chrome 134+
     chrome_options.add_argument("--no-sandbox")  # Required for running as root
@@ -160,9 +162,9 @@ def scrape_vinted(query):
     chrome_options.add_argument("--window-size=1920,1080")  # Ensures Selenium has a valid viewport
     chrome_options.add_argument("--disable-software-rasterizer")  # Fixes rendering issues
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
-    chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
-    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
+    chrome_options.add_argument("--remote-debugging-port=9230")  # Helps with debugging  
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
     # chrome_options = configure_proxy_options()
 
 
@@ -227,9 +229,8 @@ def scrape_depop(query):
     chrome_options.add_argument("--window-size=1920,1080")  # Ensures Selenium has a valid viewport
     chrome_options.add_argument("--disable-software-rasterizer")  # Fixes rendering issues
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
-    chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
-    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
+    chrome_options.add_argument("--remote-debugging-port=9230")  # Helps with debugging  
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     # chrome_options = configure_proxy_options()
 
@@ -367,13 +368,14 @@ def scrape_mercari(query):
     chrome_options.add_argument("--window-size=1920,1080")  # Ensures Selenium has a valid viewport
     chrome_options.add_argument("--disable-software-rasterizer")  # Fixes rendering issues
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
-    chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
+    chrome_options.add_argument("--remote-debugging-port=9230")  # Helps with debugging  
 
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     # chrome_options = configure_proxy_options()
-    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
+
 
     try:
         url = f"https://www.mercari.com/jp/search/?keyword={query}"
@@ -434,12 +436,12 @@ def scrape_ebay(query):
     chrome_options.add_argument("--window-size=1920,1080")  # Ensures Selenium has a valid viewport
     chrome_options.add_argument("--disable-software-rasterizer")  # Fixes rendering issues
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
-    chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
+    chrome_options.add_argument("--remote-debugging-port=9230")  # Helps with debugging  
 
     # chrome_options = configure_proxy_options()
-    chrome_options.binary_location = "/usr/bin/google-chrome"  # Confirm Chrome location
+
     # Automatically handle chromedriver installation and path
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
     driver.get(url)
 
