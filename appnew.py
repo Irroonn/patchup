@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request, send_from_directory
 import concurrent.futures
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -14,8 +14,8 @@ app = Flask(__name__)
 CORS(app)  # This enables CORS for all routes
 
 @app.route('/')
-def hello():
-    return "Hello from DigitalOcean!"
+def index():
+    return render_template('index.html')
 
 @app.route('/static/images/<path:filename>')
 def serve_image(filename):
@@ -471,4 +471,4 @@ def search():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', debug=True)
