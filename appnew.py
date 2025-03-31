@@ -162,7 +162,7 @@ def scrape_vinted(query):
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
     chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
 
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chrome-linux64"), options=chrome_options)
+    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
     # chrome_options = configure_proxy_options()
 
 
@@ -229,7 +229,7 @@ def scrape_depop(query):
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # Prevents detection as bot
     chrome_options.add_argument("--remote-debugging-port=9222")  # Helps with debugging  
 
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chrome-linux64"), options=chrome_options)
+    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
 
     # chrome_options = configure_proxy_options()
 
@@ -373,7 +373,7 @@ def scrape_mercari(query):
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     # chrome_options = configure_proxy_options()
 
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chrome-linux64"), options=chrome_options)
+    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
 
     try:
         url = f"https://www.mercari.com/jp/search/?keyword={query}"
@@ -439,7 +439,7 @@ def scrape_ebay(query):
     # chrome_options = configure_proxy_options()
 
     # Automatically handle chromedriver installation and path
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chrome-linux64"), options=chrome_options)
+    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=chrome_options)
 
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
     driver.get(url)
