@@ -22,6 +22,52 @@ def index():
 def serve_image(filename):
     return send_from_directory('static/images', filename)
 
+def setup_driver():
+    # Define options that focus on stability
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+    
+    # Critical for stability
+    options.add_argument("--disable-crash-reporter")
+    options.add_argument("--disable-in-process-stack-traces")
+    options.add_argument("--disable-logging")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-notifications")
+    options.add_argument("--disable-background-networking")
+    
+    # Add a generous timeout for browser operations
+    options.page_load_strategy = 'normal'
+    
+    try:
+        # Try using static ChromeDriver path (more reliable on server environments)
+        service = Service(executable_path='/usr/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=options)
+        
+        # Set timeouts to avoid hanging
+        driver.set_page_load_timeout(30)
+        driver.set_script_timeout(30)
+        
+        return driver
+    except Exception as e:
+        print(f"Error creating Chrome driver with static path: {e}")
+        try:
+            # Fall back to ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+            
+            # Set timeouts
+            driver.set_page_load_timeout(30)
+            driver.set_script_timeout(30)
+            
+            return driver
+        except Exception as e:
+            print(f"Error creating Chrome driver with ChromeDriverManager: {e}")
+            raise
+
 def get_chrome_options():
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")
@@ -168,7 +214,7 @@ def scrape_vinted(query):
     # Set up Selenium options
     
     chrome_options = get_chrome_options()
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver = setup_driver()
 
     # chrome_options = configure_proxy_options()
 
@@ -227,7 +273,7 @@ def scrape_vinted(query):
 def scrape_depop(query):
     # Set up Selenium options
     chrome_options = get_chrome_options()
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver = setup_driver()
 
     # chrome_options = configure_proxy_options()
 
@@ -358,7 +404,7 @@ def scrape_depop(query):
 
 def scrape_mercari(query):
     chrome_options = get_chrome_options()
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver = setup_driver()
 
 
 
@@ -414,7 +460,7 @@ def scrape_mercari(query):
 
 def scrape_ebay(query):
     chrome_options = get_chrome_options()
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver = setup_driver()
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
     driver.get(url)
 
