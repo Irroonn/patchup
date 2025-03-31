@@ -194,10 +194,12 @@ class WebDriverPool:
         chrome_options = Options()
         
         # Add default options for stability
+        chrome_binary_path = "/opt/google/chrome/chrome"
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.binary_location = chrome_binary_path
         
         # Add user-defined options
         for option, value in self.browser_options.items():
