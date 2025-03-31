@@ -214,12 +214,12 @@ class WebDriverPool:
         
         # Create the driver
         if self.chrome_driver_path:
-            chrome_driver_path = "/usr/local/bin/chromedriver"
+            chrome_driver_path = "/usr/local/bin/chromedriver/chrome"
             chrome_binary_path = "/opt/google/chrome/chrome"
             service = Service(executable_path=chrome_driver_path)
             driver = webdriver.Chrome(service=service, options=chrome_options)
         else:
-            chrome_driver_path = "/usr/local/bin/chromedriver"
+            chrome_driver_path = "/usr/local/bin/chromedriver/chrome"
             chrome_binary_path = "/opt/google/chrome/chrome"
             service = Service(executable_path=chrome_driver_path)
             driver = webdriver.Chrome(service=service, options=chrome_options)
