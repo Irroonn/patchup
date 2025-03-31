@@ -482,6 +482,7 @@ def convert_to_gbp(price_string):
 
 # Vinted Scraping Function
 def scrape_vinted(query):
+    driver = None
     # Set up Selenium options
     
     chrome_options = get_chrome_options()
@@ -542,6 +543,7 @@ def scrape_vinted(query):
 
 # Update the Depop scraping function
 def scrape_depop(query):
+    driver = None
     # Set up Selenium options
     chrome_options = get_chrome_options()
     driver = driver_pool.get_driver(timeout=10)
@@ -674,6 +676,7 @@ def scrape_depop(query):
 
 
 def scrape_mercari(query):
+    driver = None
     chrome_options = get_chrome_options()
     driver = driver_pool.get_driver(timeout=10)
 
@@ -730,6 +733,7 @@ def scrape_mercari(query):
 
 
 def scrape_ebay(query):
+    driver = None
     chrome_options = get_chrome_options()
     driver = driver_pool.get_driver(timeout=10)
     url = f"https://www.ebay.co.uk/sch/i.html?_nkw={query.replace(' ', '+')}&_ipg=240"
