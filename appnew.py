@@ -13,6 +13,9 @@ import time
 app = Flask(__name__)
 CORS(app)  # This enables CORS for all routes
 
+@app.route('/')
+def hello():
+    return "Hello from DigitalOcean!"
 
 @app.route('/static/images/<path:filename>')
 def serve_image(filename):
@@ -457,4 +460,4 @@ def search():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0')
